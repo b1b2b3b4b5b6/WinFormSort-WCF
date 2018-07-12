@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ReferenceGroup xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ID="a9dc08bc-36ca-460e-957b-881797f8b466" xmlns="urn:schemas-microsoft-com:xml-wcfservicemap">
+  <ClientOptions>
+    <GenerateAsynchronousMethods>false</GenerateAsynchronousMethods>
+    <EnableDataBinding>true</EnableDataBinding>
+    <ExcludedTypes />
+    <ImportXmlTypes>false</ImportXmlTypes>
+    <GenerateInternalTypes>false</GenerateInternalTypes>
+    <GenerateMessageContracts>false</GenerateMessageContracts>
+    <NamespaceMappings />
+    <CollectionMappings />
+    <GenerateSerializableTypes>true</GenerateSerializableTypes>
+    <Serializer>Auto</Serializer>
+    <UseSerializerForFaults>true</UseSerializerForFaults>
+    <ReferenceAllAssemblies>true</ReferenceAllAssemblies>
+    <ReferencedAssemblies />
+    <ReferencedDataContractTypes />
+    <ServiceContractMappings />
+  </ClientOptions>
+  <MetadataSources>
+    <MetadataSource Address="http://idea-pc:81/IRouteDirector.StackSeq.svc?wsdl" Protocol="http" SourceId="1" />
+  </MetadataSources>
+  <Metadata>
+    <MetadataFile FileName="IRouteDirector.xsd" MetadataType="Schema" ID="a414923f-2d3f-4ee7-90d7-a4b3bf490911" SourceId="1" SourceUrl="http://idea-pc:81/IRouteDirector.StackSeq.svc?xsd=xsd0" />
+    <MetadataFile FileName="IRouteDirector1.xsd" MetadataType="Schema" ID="c2741fb6-70d5-45ed-8d0b-4768980c7796" SourceId="1" SourceUrl="http://idea-pc:81/IRouteDirector.StackSeq.svc?xsd=xsd1" />
+    <MetadataFile FileName="StackSeq.wsdl" MetadataType="Wsdl" ID="a8e5f1ed-6907-41a8-9605-da1e1c1c649c" SourceId="1" SourceUrl="http://idea-pc:81/IRouteDirector.StackSeq.svc?wsdl" />
+    <MetadataFile FileName="IRouteDirector2.xsd" MetadataType="Schema" ID="90c7436d-a03f-4aef-87cf-e0860df9220e" SourceId="1" SourceUrl="http://idea-pc:81/IRouteDirector.StackSeq.svc?xsd=xsd2" />
+  </Metadata>
+  <Extensions>
+    <ExtensionFile FileName="configuration91.svcinfo" Name="configuration91.svcinfo" />
+    <ExtensionFile FileName="configuration.svcinfo" Name="configuration.svcinfo" />
+  </Extensions>
+</ReferenceGroup>
