@@ -15,16 +15,22 @@ namespace IRouteDirector
 		int AddStackSeq(string strJson);
 
 		[OperationContract]
-		void Reset();
+		void ClearAll();
 
 		[OperationContract]
-		void DleteLastStackSeq();
+		int ResetWorkingStackSeq();
 
 		[OperationContract]
-		void ResetWorkingStackSeq();
-
+		int DleteStackSeq(int tSeqNum);
+		
 		[OperationContract]
 		void StopWorkingStackSeq();
+
+		[OperationContract]
+		void StartWorkingStackSeq();
+
+		[OperationContract]
+		int GetWorkingStackSeq();
 	}
 
 	[DataContract]

@@ -29,14 +29,6 @@ namespace RouteDirector
 			}
 			routeDirectControl.FlushMsg();
 
-			//List<Chest> chestList = new List<Chest> { };
-			//chestList.Add(new Chest() { barcode = " 1203", node = 6, lane = 997 });
-			//chestList.Add(new Chest() { barcode = "1144", node = 6, lane = 997 });
-			//chestList.Add(new Chest() { barcode = "1165", node = 6, lane = 997 });
-			//Sorting sorting = new Sorting();
-			//if(sorting.AddStackSeq(chestList) != 0)
-			//	throw new NotImplementedException();
-
 			ServiceHost host = new ServiceHost(typeof(Sorting));
 			host.Open();
 			Log.log.Debug("WCF start");
@@ -45,23 +37,10 @@ namespace RouteDirector
 			{
 				MessageBase msg;
 				msg = routeDirectControl.WaitMsg();
-
-				if (msg.msgId == (Int16)MessageBase.MessageType.DivertReq)
-				{
-					DivertCmd divertCmd;
-					divertCmd = StackSeq.HanderReq((DivertReq)msg);
-					if (divertCmd == null)
-						routeDirectControl.SendMsg(new HeartBeat(RouteDirectControl.heartBeatTime));
-					else
-						routeDirectControl.SendMsg(divertCmd);
-				}
-
-				if (msg.msgId == (Int16)MessageBase.MessageType.DivertRes)
-				{
-					StackSeq.HanderRes((DivertRes)msg);
-				}
-
-				Log.log.Error("Receive wrong meesage:" + msg.GetInfo(new StringBuilder()));
+				DivertCmd divertCmd = StackSeq.Hander(msg);
+				if (divertCmd != null)
+					routeDirectControl.SendMsg(divertCmd); 
+				//Console.WriteLine(msg.GetInfo(new StringBuilder()));
 			}
 
 		}

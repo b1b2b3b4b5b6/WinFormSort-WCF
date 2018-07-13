@@ -106,7 +106,7 @@ namespace RouteDirector
 		private void SendHeartTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
 		{
 			HeartBeat heartBeat = new HeartBeat(heartBeatTime);
-			Log.log.Debug("Sned Heartbeat");
+			//Log.log.Debug("Sned Heartbeat");
 			SendMsg(heartBeat);
 		}
 
@@ -126,7 +126,7 @@ namespace RouteDirector
 		{
 			sendHeartTime.Stop();
 			sendHeartTime.Start();
-			Log.log.Debug("Send heartbeat reset");
+			//Log.log.Debug("Send heartbeat reset");
 		}
 
 		#endregion
@@ -301,7 +301,7 @@ namespace RouteDirector
 
 			tcpSocket.SendData(packet.GetBuf());
 			
-			Log.log.Debug("Send message Id: " + msg.msgId);
+			//Log.log.Debug("Send message Id: " + msg.msgId);
 			cycleNum++;
 			if (cycleNum > 99)
 				cycleNum = 1;			

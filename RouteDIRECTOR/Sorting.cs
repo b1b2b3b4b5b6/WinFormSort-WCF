@@ -18,31 +18,43 @@ namespace IRouteDirector
 				box.lane = chest.lane;
 				box.node = chest.node;
 				box.status = Box.BoxStatus.Inital;
+				boxList.Add(box);
 			}
-			if (StackSeq.AddStackSeq(boxList) != null)
-				return 0;
+			return StackSeq.AddStackSeq(boxList);
+		}
+
+		public int DleteStackSeq(int tSeqNum)
+		{
+			return StackSeq.DeleteStackSeq(tSeqNum);
+		}
+
+		public int GetWorkingStackSeq()
+		{
+			if (StackSeq.workingStack != null)
+				return StackSeq.workingStack.SeqNum;
 			else
 				return -1;
 		}
 
-		public void DleteLastStackSeq()
+		public void ClearAll()
 		{
-			throw new NotImplementedException();
+			StackSeq.ClearAll();
 		}
 
-		public void Reset()
+		public int ResetWorkingStackSeq()
 		{
-			throw new NotImplementedException();
+			return StackSeq.ResetWorkingStackSeq();
 		}
 
-		public void ResetWorkingStackSeq()
+		public void StartWorkingStackSeq()
 		{
-			throw new NotImplementedException();
+			StackSeq.sortStatus = StackSeq.SortStatus.Working;
 		}
 
 		public void StopWorkingStackSeq()
 		{
-			throw new NotImplementedException();
+			StackSeq.sortStatus = StackSeq.SortStatus.Stoping;
 		}
+
 	}
 }
