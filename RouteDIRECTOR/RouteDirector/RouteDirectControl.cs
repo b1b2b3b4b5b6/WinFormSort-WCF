@@ -43,18 +43,18 @@ namespace RouteDirector
 		{
 			
 			IPEndPoint ipe = new IPEndPoint(IPAddress.Parse("172.16.18.171"), Convert.ToInt32("3000"));
-			RecHeartTimerStart();
+			Log.log.Debug("Try to establish connection");
 			if (tcpSocket.ConnectServer(ipe) == 0)
 			{
+				RecHeartTimerStart();
 				receiveThread.Start();
                 SendStart();
 				online = true;
 				SendHeartTimerStart();
-				Log.log.Debug("EstablishConnection success");
+				Log.log.Debug("Establish connection success");
 				return 0;
 			}
-			Log.log.Debug("EstablishConnection fail");
-			StopConnection();
+			Log.log.Debug("Establish connection fail");
 			return -1;
 		}
 
