@@ -51,7 +51,7 @@ namespace RouteDirector
 				receiveThread.Start();
                 SendStart();
 				online = true;
-				SendHeartTimerStart();
+				//SendHeartTimerStart();
 				Log.log.Debug("Establish connection success");
 				return 0;
 			}
@@ -140,7 +140,7 @@ namespace RouteDirector
 			online = false;
 			ack = 0;
 			RecHeartTimerStop();
-			SendHeartTimerStop();
+			//SendHeartTimerStop();
 			receiveThread.Abort();
 			//缺少对receive是否完成的判断
 			receiveThread = new Thread(ReceiveHandle) { IsBackground = true };
@@ -221,12 +221,13 @@ namespace RouteDirector
 
 								Packet packet = new Packet(qPacketBuf);
 								//Log.log.Debug(packet.GetInfo(new StringBuilder()));
-								//if (packet.cycleNum != 0)
-								//	ack = packet.cycleNum;
+								if (packet.cycleNum != 0)
+									ack = packet.cycleNum;
 								foreach (MessageBase msg in packet.messageList)
 								{
 									if (msg.msgId == (Int16)MessageType.HeartBeat)
 									{
+										SendMsg(new HeartBeat(heartBeatTime));
 										break;
 									}
 										
@@ -316,7 +317,7 @@ namespace RouteDirector
 				packet.AddCycleNum(cycleNum, ack);
 				packet.AddMsg(msg);
 				tcpSocket.SendData(packet.GetBuf());
-				SendHeartTimerReset();
+				//SendHeartTimerReset();
 				//Log.log.Debug("send packet");
 				//Log.log.Debug(packet.GetInfo(new StringBuilder()));
 				cycleNum++;

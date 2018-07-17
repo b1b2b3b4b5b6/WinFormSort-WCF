@@ -15,7 +15,7 @@ namespace RouteDirector
 		static public StackSeq workingStack = null;
 		static public List<StackSeq> waitingStackSeqList = new List<StackSeq> { };
 		static private List<string> outListBox = new List<string> { };
-
+		static private int seqNumConst = 0;
 		static readonly object lockObject = new object();
 
 		public enum StackStatus
@@ -52,7 +52,8 @@ namespace RouteDirector
 					Log.log.Debug("barcode:" + box.barcode + "|node:" + box.node + "|lane" + box.lane);
 				}
 				waitingStackSeqList.Add(stackSeq);
-				stackSeq.SeqNum += 1;
+				seqNumConst++;
+				stackSeq.SeqNum = seqNumConst;
 				return stackSeq.SeqNum;
 			}
 			return -1;
@@ -62,19 +63,26 @@ namespace RouteDirector
 		{
 			lock (lockObject)
 			{
-				if (tSeqNum == workingStack.SeqNum)
+				if (workingStack != null)
 				{
-					workingStack = null;
-					return 0;
+					if (tSeqNum == workingStack.SeqNum)
+					{
+						workingStack = null;
+						Log.log.Debug("Delete stackseq[" + tSeqNum + "] success");
+						return 0;
+					}
 				}
+
 				StackSeq stackSeq;
 				stackSeq = waitingStackSeqList.Find(mStackSeq => mStackSeq.SeqNum == tSeqNum);
 				if (stackSeq != null)
 				{
 					waitingStackSeqList.Remove(stackSeq);
+					Log.log.Debug("Delete stackseq[" + tSeqNum + "] success");
 					return 0;
 				}
 			}
+			Log.log.Debug("stackseq[" + tSeqNum + "] not exist");
 			return -1;
 		}
 
@@ -86,18 +94,27 @@ namespace RouteDirector
 				waitingStackSeqList.Clear();
 				outListBox.Clear();
 				sortStatus = SortStatus.Stoping;
+				Log.log.Debug("Clear all");
 			}
 		}
 
 		static public int ResetWorkingStackSeq()
 		{
 			if (workingStack == null)
+			{
+				Log.log.Debug("There is no working stack");
 				return -1;
-			workingStack.boxList.ForEach(box => box.status = BoxStatus.Inital);
-			workingStack.stackStatus = StackStatus.Inital;
-			waitingStackSeqList.Insert(0, workingStack);
-			workingStack = null;
-			return 0;
+			}
+
+			lock (lockObject)
+			{
+				workingStack.boxList.ForEach(box => box.status = BoxStatus.Inital);
+				workingStack.stackStatus = StackStatus.Inital;
+				waitingStackSeqList.Insert(0, workingStack);
+				workingStack = null;
+				Log.log.Debug("Reset working stack");
+				return 0;
+			}
 		}
 
 		private int AddBoxList(List<Box> tBoxList)
@@ -137,6 +154,7 @@ namespace RouteDirector
 			}
 
 		}
+
 		static private DivertCmd HanderReq(DivertReq divertReq)
 		{
 			if (sortStatus == SortStatus.Stoping)

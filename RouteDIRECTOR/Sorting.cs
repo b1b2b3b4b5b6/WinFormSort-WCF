@@ -23,7 +23,7 @@ namespace IRouteDirector
 			return StackSeq.AddStackSeq(boxList);
 		}
 
-		public int DleteStackSeq(int tSeqNum)
+		public int DeleteStackSeq(int tSeqNum)
 		{
 			return StackSeq.DeleteStackSeq(tSeqNum);
 		}
@@ -49,11 +49,18 @@ namespace IRouteDirector
 		public void StartWorkingStackSeq()
 		{
 			StackSeq.sortStatus = StackSeq.SortStatus.Working;
+			Log.log.Debug("Start sorting");
 		}
 
 		public void StopWorkingStackSeq()
 		{
 			StackSeq.sortStatus = StackSeq.SortStatus.Stoping;
+			Log.log.Debug("Stop sorting");
+		}
+
+		public int GetWaitSeqStackCount()
+		{
+			return StackSeq.waitingStackSeqList.Count();
 		}
 
 	}

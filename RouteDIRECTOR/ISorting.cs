@@ -21,7 +21,7 @@ namespace IRouteDirector
 		int ResetWorkingStackSeq();
 
 		[OperationContract]
-		int DleteStackSeq(int tSeqNum);
+		int DeleteStackSeq(int tSeqNum);
 		
 		[OperationContract]
 		void StopWorkingStackSeq();
@@ -31,6 +31,9 @@ namespace IRouteDirector
 
 		[OperationContract]
 		int GetWorkingStackSeq();
+
+		[OperationContract]
+		int GetWaitSeqStackCount();
 	}
 
 	[DataContract]
