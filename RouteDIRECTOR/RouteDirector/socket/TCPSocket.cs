@@ -22,11 +22,10 @@ namespace RouteDirector
 			{
 				clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 				clientSocket.Connect(ipe);
-				//clientSocket.BeginConnect(ipe, new AsyncCallback(EndConnect), clientSocket);
 			}
 			catch(Exception e)
 			{
-				Log.log.Error("tcp connnect error", e);
+				Log.log.Error("tcp connnect error",e);
 				return -1;
 			}
 
@@ -40,7 +39,8 @@ namespace RouteDirector
 			{
 				if (ConnectStatus == true)
 				{
-					clientSocket.Disconnect(true);
+					clientSocket.Disconnect(false);
+					clientSocket.Close();
 					ConnectStatus = false;
 				}
 
@@ -64,9 +64,9 @@ namespace RouteDirector
 				return packet;
 			}
 
-			catch (Exception e)
+			catch (Exception)
 			{
-				Log.log.Error("tcp receive error", e);
+				Log.log.Debug("tcp receive error");
 				return null;
 			}
 		}
@@ -80,7 +80,7 @@ namespace RouteDirector
 			}
 			catch (Exception e)
 			{
-				Log.log.Error("tcp send error", e);
+				Log.log.Debug("tcp send error", e);
 				return 0;
 			}
 			return len;
