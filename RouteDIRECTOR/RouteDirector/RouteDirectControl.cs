@@ -44,18 +44,23 @@ namespace RouteDirector
 		{
 			
 			IPEndPoint ipe = new IPEndPoint(IPAddress.Parse("172.16.18.171"), Convert.ToInt32("3000"));
-			Log.log.Debug("Try to establish connection");
+			Log.log.Info("Try to establish connection");
 			if (tcpSocket.ConnectServer(ipe) == 0)
 			{
-				RecHeartTimerStart();
 				receiveThread.Start();
-                SendStart();
+				if (SendStart() != 0)
+				{
+					Log.log.Info("Establish connection fail");
+					StopConnection();
+					return -1;
+				}
 				online = true;
-				//SendHeartTimerStart();
-				Log.log.Debug("Establish connection success");
+				SendHeartTimerStart();
+				RecHeartTimerStart();
+				Log.log.Info("Establish connection success");
 				return 0;
 			}
-			Log.log.Debug("Establish connection fail");
+			Log.log.Info("Establish connection fail");
 			return -1;
 		}
 
@@ -106,7 +111,7 @@ namespace RouteDirector
 		private void SendHeartTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
 		{
 			HeartBeat heartBeat = new HeartBeat(heartBeatTime);
-			//Log.log.Debug("Sned Heartbeat");
+			Log.log.Debug("Send Heartbeat");
 			SendMsg(heartBeat);
 		}
 
@@ -126,7 +131,7 @@ namespace RouteDirector
 		{
 			sendHeartTime.Stop();
 			sendHeartTime.Start();
-			//Log.log.Debug("Send heartbeat reset");
+			Log.log.Debug("Send heartbeat reset");
 		}
 
 
@@ -140,36 +145,36 @@ namespace RouteDirector
 			online = false;
 			ack = 0;
 			RecHeartTimerStop();
-			//SendHeartTimerStop();
+			SendHeartTimerStop();
 			receiveThread.Abort();
 			//缺少对receive是否完成的判断
 			receiveThread = new Thread(ReceiveHandle) { IsBackground = true };
 			tcpSocket.DisconnectServer();
-			Log.log.Debug("StopConnection success");
+			Log.log.Info("StopConnection success");
 
 		}
 
 		private void Reconnection()
 		{
-			Log.log.Debug("Reconnectioning,wait 10s");
+			Log.log.Info("Reconnectioning,wait 10s");
 			StopConnection();
 			Thread.Sleep(10000);
 			while (true)
 			{
 				if (EstablishConnection() == 0)
 				{
-					Log.log.Debug("Reconnection success");
+					Log.log.Info("Reconnection success");
 					break;
 				}
 				else
-					Log.log.Debug("Reconnection fail,try again");
+					Log.log.Info("Reconnection fail,try again");
 			}
 
 		}
 
 		private void Unexpect()
 		{
-			Log.log.Debug("Unexpect msg");
+			Log.log.Error("Unexpect msg");
 			throw new Exception("unexpect msg");
 		}
 
@@ -181,6 +186,7 @@ namespace RouteDirector
 				packetBuf = tcpSocket.ReceiveData();
 				if (packetBuf == null)
 				{
+
 					StopConnection();
 				}
 				RecHeartTimerReset();
@@ -220,21 +226,22 @@ namespace RouteDirector
 								start = end;
 
 								Packet packet = new Packet(qPacketBuf);
-								//Log.log.Debug(packet.GetInfo(new StringBuilder()));
+								Log.log.Debug(packet.GetInfo(new StringBuilder("receive packet\r\n")));
 								if (packet.cycleNum != 0)
 									ack = packet.cycleNum;
 								foreach (MessageBase msg in packet.messageList)
 								{
 									if (msg.msgId == (Int16)MessageType.HeartBeat)
 									{
-										SendMsg(new HeartBeat(heartBeatTime));
-										break;
+										Log.log.Info("Connnection is OK");
+										//SendMsg(new HeartBeat(heartBeatTime));
+										//break;
 									}
 										
 
 									if (msg.msgId == (Int16)MessageType.CommsErr)
 									{
-										Log.log.Debug("Get CommsErr");
+										Log.log.Error("Get CommsErr");
 										Reconnection();
 									}
 
@@ -274,18 +281,20 @@ namespace RouteDirector
         /// </summary>
         /// <param name="packet">packet对象</param>
 
-		private void SendStart()
+		private int SendStart()
 		{
-			lock (sendLock)
+			Packet packet = new Packet();
+			HeartBeat heartBeat = new HeartBeat(heartBeatTime);
+			packet.AddMsg(heartBeat);
+			packet.AddCycleNum(0, 0);
+			if (tcpSocket.SendData(packet.GetBuf()) == -1)
 			{
-				Packet packet = new Packet();
-				HeartBeat heartBeat = new HeartBeat(heartBeatTime);
-				packet.AddMsg(heartBeat);
-				packet.AddCycleNum(0, 0);
-				tcpSocket.SendData(packet.GetBuf());
-				Log.log.Debug("Send start");
-				cycleNum = 1;
+				Log.log.Error("Send start fail");
+				return -1;
 			}
+			Log.log.Debug("Send start success");
+			cycleNum = 1;
+			return 0;
 		}
 
 
@@ -317,9 +326,8 @@ namespace RouteDirector
 				packet.AddCycleNum(cycleNum, ack);
 				packet.AddMsg(msg);
 				tcpSocket.SendData(packet.GetBuf());
-				//SendHeartTimerReset();
-				//Log.log.Debug("send packet");
-				//Log.log.Debug(packet.GetInfo(new StringBuilder()));
+				SendHeartTimerReset();
+				Log.log.Debug(packet.GetInfo(new StringBuilder("send msg\r\n")));
 				cycleNum++;
 				if (cycleNum > 99)
 					cycleNum = 1;
@@ -337,7 +345,7 @@ namespace RouteDirector
 				if (msg == null)
 					break;
 				else
-					Log.log.Debug("abandon last msg");
+					Log.log.Debug("Abandon last msg");
 			}
 		}
 	}

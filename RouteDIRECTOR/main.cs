@@ -21,7 +21,7 @@ namespace RouteDirector
 				int res = routeDirectControl.EstablishConnection();
 				if (res != 0)
 				{
-					Log.log.Debug("EstablishConnection fail,try to reconnenct,wiat 10s");
+					Log.log.Info("EstablishConnection fail,try to reconnenct,wiat 10s");
 					Thread.Sleep(10000);
 				}
 				else
@@ -31,7 +31,7 @@ namespace RouteDirector
 
 			ServiceHost host = new ServiceHost(typeof(Sorting));
 			host.Open();
-			Log.log.Debug("WCF start");
+			Log.log.Info("WCF start");
 
 			while (true)
 			{
@@ -40,7 +40,6 @@ namespace RouteDirector
 				DivertCmd divertCmd = StackSeq.Hander(msg);
 				if (divertCmd != null)
 					routeDirectControl.SendMsg(divertCmd); 
-				//Console.WriteLine(msg.GetInfo(new StringBuilder()));
 			}
 
 		}

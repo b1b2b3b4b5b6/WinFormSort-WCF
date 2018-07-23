@@ -29,14 +29,14 @@ namespace RouteDirector
 				return false;
 
 			int number;
-			number = boxList.FindIndex(box => box.status == Box.BoxStatus.Checked);
+			number = boxList.FindIndex(box => box.status != Box.BoxStatus.Success);
 
 			if (number == index)
 				return true;
 
 			else
 			{
-				Log.log.Debug("node:" + node + " lane:" + lane + "|next box: No." + number + " " + boxList[number].barcode + "|reject box: NO." + index + " " + tBox.barcode);
+				Log.log.Info("node:" + node + " lane:" + lane + "|reject box: NO." + index + " " + tBox.barcode + "|next box: No." + number + " " + boxList[number].barcode);
 				return false;
 			}
 		}

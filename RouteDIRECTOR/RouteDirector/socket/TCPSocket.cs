@@ -25,7 +25,7 @@ namespace RouteDirector
 			}
 			catch(Exception e)
 			{
-				Log.log.Error("tcp connnect error",e);
+				Log.log.Error("Tcp connnect error",e);
 				return -1;
 			}
 
@@ -64,9 +64,9 @@ namespace RouteDirector
 				return packet;
 			}
 
-			catch (Exception)
+			catch (Exception e)
 			{
-				Log.log.Debug("tcp receive error");
+				Log.log.Error("Tcp receive error", e);
 				return null;
 			}
 		}
@@ -80,8 +80,8 @@ namespace RouteDirector
 			}
 			catch (Exception e)
 			{
-				Log.log.Debug("tcp send error", e);
-				return 0;
+				Log.log.Error("Tcp send error",e);
+				return -1;
 			}
 			return len;
 		}

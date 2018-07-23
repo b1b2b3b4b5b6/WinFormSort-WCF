@@ -20,7 +20,7 @@ namespace IRouteDirector
 				box.status = Box.BoxStatus.Inital;
 				boxList.Add(box);
 			}
-			return StackSeq.AddStackSeq(boxList);
+			return StackSeq.AddStackSeq(boxList, chestList[0].container);
 		}
 
 		public int DeleteStackSeq(int tSeqNum)
@@ -36,9 +36,10 @@ namespace IRouteDirector
 				return -1;
 		}
 
-		public void ClearAll()
+		public int ClearAll()
 		{
 			StackSeq.ClearAll();
+			return 0;
 		}
 
 		public int ResetWorkingStackSeq()
@@ -46,16 +47,18 @@ namespace IRouteDirector
 			return StackSeq.ResetWorkingStackSeq();
 		}
 
-		public void StartWorkingStackSeq()
+		public int StartWorkingStackSeq()
 		{
 			StackSeq.sortStatus = StackSeq.SortStatus.Working;
-			Log.log.Debug("Start sorting");
+			Log.log.Info("Start sorting");
+			return 0;
 		}
 
-		public void StopWorkingStackSeq()
+		public int StopWorkingStackSeq()
 		{
 			StackSeq.sortStatus = StackSeq.SortStatus.Stoping;
-			Log.log.Debug("Stop sorting");
+			Log.log.Info("Stop sorting");
+			return 0;
 		}
 
 		public int GetWaitSeqStackCount()

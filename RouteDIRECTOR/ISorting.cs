@@ -7,44 +7,42 @@ using System.Text;
 
 namespace IRouteDirector
 {
-	// 注意: 使用“重构”菜单上的“重命名”命令，可以同时更改代码和配置文件中的接口名“ISorting”。
-	[ServiceContract]
+	// 未注明返回值的函数默认成功返回0，失败返回-1；
+	[ServiceContract] 
 	public interface ISorting
 	{
 		[OperationContract]
-		int AddStackSeq(string strJson);
+		int AddStackSeq(string strJson); //添加分拣序列（托盘号），List<Chest>序列化
 
 		[OperationContract]
-		void ClearAll();
+		int ClearAll(); //清除所有分拣任务，初始化分拣机
 
 		[OperationContract]
-		int ResetWorkingStackSeq();
+		int ResetWorkingStackSeq(); //重置正在进行分拣的序列（托盘号），使其进入等待分拣状态
 
 		[OperationContract]
-		int DeleteStackSeq(int tSeqNum);
-		
-		[OperationContract]
-		void StopWorkingStackSeq();
+		int DeleteStackSeq(int tSeqNum); //删除分拣序列，参数为托盘号
 
 		[OperationContract]
-		void StartWorkingStackSeq();
+		int StopWorkingStackSeq(); //停止分拣（默认状态）
 
 		[OperationContract]
-		int GetWorkingStackSeq();
+		int StartWorkingStackSeq(); //启动分拣
 
 		[OperationContract]
-		int GetWaitSeqStackCount();
+		int GetWorkingStackSeq(); //返回正在进行分拣的序列号（托盘号）
+
+		[OperationContract]
+		int GetWaitSeqStackCount(); //返回正在等待分拣任务数
+
 	}
 
-	[DataContract]
 	public class Chest
 	{
-		[DataMember]
 		public string barcode;
-		[DataMember]
 		public Int16 node;
-		[DataMember]
 		public Int16 lane;
+		public int container;
 	}
 
 	

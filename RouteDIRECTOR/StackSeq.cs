@@ -15,18 +15,14 @@ namespace RouteDirector
 		static public StackSeq workingStack = null;
 		static public List<StackSeq> waitingStackSeqList = new List<StackSeq> { };
 		static private List<string> outListBox = new List<string> { };
-		static private int seqNumConst = 0;
 		static readonly object lockObject = new object();
-
+		static System.Timers.Timer recHeartTime;
+		static System.Timers.Timer sendHeartTime;
 		public enum StackStatus
 		{
 			Finished = 0,
-			Deleting,
 			CheckingBox,
 			BoxChecked,
-			LosingBox,
-			SortFalut,
-			RobotFalut,
 			Busying,
 			Inital,
 		}
@@ -38,22 +34,21 @@ namespace RouteDirector
 		static Int16 solveNode = 6;
 		static Int16 solveLane = 997;
 
-		static public int AddStackSeq(List<Box> tBoxList)
+		static public int AddStackSeq(List<Box> tBoxList, int container)
 		{
 			StackSeq stackSeq = new StackSeq();
 			int res = stackSeq.AddBoxList(tBoxList);
 			if (res <= 0)
-				Log.log.Debug("StackSeq add fail");
+				Log.log.Info("StackSeq add fail");
 			else
 			{
-				Log.log.Debug("Added stacklist, box count is " + stackSeq.boxList.Count);
+				Log.log.Info("Added stacklist, box counts is " + stackSeq.boxList.Count + ", seqnum is " + container);
 				foreach (Box box in stackSeq.boxList)
 				{
-					Log.log.Debug("barcode:" + box.barcode + "|node:" + box.node + "|lane" + box.lane);
+					Log.log.Info("barcode:" + box.barcode + "|node:" + box.node + "|lane" + box.lane);
 				}
 				waitingStackSeqList.Add(stackSeq);
-				seqNumConst++;
-				stackSeq.SeqNum = seqNumConst;
+				stackSeq.SeqNum = container;
 				return stackSeq.SeqNum;
 			}
 			return -1;
@@ -68,7 +63,7 @@ namespace RouteDirector
 					if (tSeqNum == workingStack.SeqNum)
 					{
 						workingStack = null;
-						Log.log.Debug("Delete stackseq[" + tSeqNum + "] success");
+						Log.log.Info("Delete stackseq[" + tSeqNum + "] success");
 						return 0;
 					}
 				}
@@ -78,11 +73,11 @@ namespace RouteDirector
 				if (stackSeq != null)
 				{
 					waitingStackSeqList.Remove(stackSeq);
-					Log.log.Debug("Delete stackseq[" + tSeqNum + "] success");
+					Log.log.Info("Delete stackseq[" + tSeqNum + "] success");
 					return 0;
 				}
 			}
-			Log.log.Debug("stackseq[" + tSeqNum + "] not exist");
+			Log.log.Info("stackseq[" + tSeqNum + "] not exist");
 			return -1;
 		}
 
@@ -94,7 +89,7 @@ namespace RouteDirector
 				waitingStackSeqList.Clear();
 				outListBox.Clear();
 				sortStatus = SortStatus.Stoping;
-				Log.log.Debug("Clear all");
+				Log.log.Info("Clear all");
 			}
 		}
 
@@ -102,7 +97,7 @@ namespace RouteDirector
 		{
 			if (workingStack == null)
 			{
-				Log.log.Debug("There is no working stack");
+				Log.log.Info("Delet working stackseq fail, There is no working stack");
 				return -1;
 			}
 
@@ -112,7 +107,7 @@ namespace RouteDirector
 				workingStack.stackStatus = StackStatus.Inital;
 				waitingStackSeqList.Insert(0, workingStack);
 				workingStack = null;
-				Log.log.Debug("Reset working stack");
+				Log.log.Info("Reset working stack");
 				return 0;
 			}
 		}
@@ -162,15 +157,16 @@ namespace RouteDirector
 			Box box;
 			if (divertReq.codeStr.Contains("?"))
 			{
-				Log.log.Debug("find unknow box in node:" + divertReq.nodeId);
+				Log.log.Info("find unknow box in node:" + divertReq.nodeId);
 				if (divertReq.nodeId == solveNode)
 				{
-					Log.log.Debug("removing unknow box from conveyor line");
+					Log.log.Info("removing unknow box from line");
 					return new DivertCmd(divertReq, solveLane);
 				}
 				else
-					Log.log.Debug("Can not remove unknow box from conveyor line, it is not in solve node");
+					Log.log.Info("Will remove unknow box from line in solve node[" + solveLane +"]");
 			}
+
 			if (CheckStackSeq() == true)
 			{
 				box = FindBox(workingStack, divertReq.codeStr);
@@ -182,7 +178,7 @@ namespace RouteDirector
 						{
 							if (nodeSeq.HanderReq(box) == true)
 							{
-								Log.log.Debug("Box: " + box.barcode + " is sorting");
+								Log.log.Info("Box: " + box.barcode + " is sorting");
 								box.status = BoxStatus.Sorting;
 								return new DivertCmd(divertReq, box.lane);
 							}
@@ -201,41 +197,42 @@ namespace RouteDirector
 					if (box.status == BoxStatus.Inital)
 					{
 						box.status = BoxStatus.Checked;
-						Log.log.Debug("Seq["+ stackSeq.SeqNum + "] Box["+ box.barcode+"]"+ " has been checked");
+						Log.log.Info("Seq["+ stackSeq.SeqNum + "] Box["+ box.barcode+"]"+ " has been checked");
 						if (stackSeq.boxList.TrueForAll(mBox => mBox.status == BoxStatus.Checked) == true)
 						{
-							Log.log.Debug("Seq[" + stackSeq.SeqNum + "] all box has been checked");
+							Log.log.Info("Seq[" + stackSeq.SeqNum + "] all box has been checked");
 							stackSeq.stackStatus = StackStatus.BoxChecked;
 						}
-							
-						
 					}
 					return null;
 				}
 			}
 
-			Log.log.Debug("find box["+ divertReq.codeStr + "] out of list");
+			Log.log.Info("find box["+ divertReq.codeStr + "] out of list");
 			if (divertReq.nodeId == solveNode)
 			{
-				Log.log.Debug("removing outlist box[" + divertReq.codeStr + "] from conveyor line");
+				Log.log.Info("removing outlist box[" + divertReq.codeStr + "] from line");
 				outListBox.Add(divertReq.codeStr);
 				return new DivertCmd(divertReq, solveLane);
 			}
 			else
-				Log.log.Debug("Can not remove outlist box[" + divertReq.codeStr + "] from conveyor line, it is not in solve node");
+				Log.log.Info("Will remove outlist box[" + divertReq.codeStr + "] from line in solve node[" + solveLane + "]");
 			return  null;
 		}
 
 		static private void HanderRes(DivertRes divertRes)
 		{
+			if (divertRes.divertRes == 1)
+				return;
 			Box box;
 			if (divertRes.codeStr.Contains("?")&&(divertRes.nodeId == solveNode))
 			{
 				if (divertRes.divertRes == 0)
-					Log.log.Debug("Success removed unknow box from conveyor line");
+					Log.log.Info("Success removed unknow box from line");
 				else
 				{
-					Log.log.Debug("removed unknow box from conveyor line fail: "+divertRes.GetResult());
+					Log.log.Info("removed unknow box from conveyor line fail: "+divertRes.GetResult());
+					;
 				}
 				return;
 			}
@@ -250,22 +247,23 @@ namespace RouteDirector
 						if (divertRes.divertRes == 0)
 						{
 							box.status = BoxStatus.Success;
-							Log.log.Debug("Box[" + box.barcode + "] sort success");
+							Log.log.Info("Box[" + box.barcode + "] sort success");
 							workingStack.CheckStatus();
+							ReportBox(new Chest() { barcode = box.barcode, lane = box.lane, node = box.node, container = workingStack.SeqNum });
 						}
 						else
 						{
+							box.status = BoxStatus.Checked;
 							if (divertRes.divertRes == 32)
 							{
-								box.status = BoxStatus.Checked;
-								Log.log.Debug("box["+box.barcode+"] sort faild,node["+ divertRes.nodeId + "]"+ "lane["+ divertRes.laneId + "] is full");
+								Log.log.Error("box["+box.barcode+"] sort faild,node["+ divertRes.nodeId + "]"+ "lane["+ box.lane + "] is full");
+								//ReportStatus(StatusToReport.LaneFull);
 								return;
 							}
 				
 							Log.log.Error("Box[" + box.barcode + "] sorting falut: " + divertRes.GetResult());
-							Log.log.Debug("ahead[node:" + box.node + "|lane:" + box.lane + "] now[node:" + divertRes.nodeId + "|lane:" + divertRes.laneId + "]");
-							workingStack.stackStatus = StackStatus.SortFalut;
-							throw new Exception("Box[" + box.barcode + "] sorting fail");
+							Log.log.Error("ahead[node:" + box.node + "|lane:" + box.lane + "] now[node:" + divertRes.nodeId + "|lane:" + divertRes.laneId + "]");
+							ReportError(new ErrorInfo(ErrorInfo.ErrorCode.SortingFault, box.barcode, box.node, box.lane));
 						}
 					}
 				}
@@ -284,12 +282,12 @@ namespace RouteDirector
 			{ 
 				outListBox.Remove(barcode);
 				if (divertRes.divertRes == 0)
-					Log.log.Debug("Box[" + divertRes.codeStr + "] out of list sort success");
+					Log.log.Info("Box[" + divertRes.codeStr + "] out of list sort success");
 				else
 				{
 					Log.log.Error("Box[" + divertRes.codeStr + "] out of list sorting falut: " + divertRes.GetResult());
-					Log.log.Debug("ahead[node:" + solveNode + "|lane:" + solveLane + "] now[node:" + divertRes.nodeId + "|lane:" + divertRes.laneId + "]");
-					throw new Exception("Box[" + divertRes.codeStr + "] out of list sorting fail");
+					Log.log.Error("ahead[node:" + solveNode + "|lane:" + solveLane + "] now[node:" + divertRes.nodeId + "|lane:" + divertRes.laneId + "]");
+					ReportError(new ErrorInfo(ErrorInfo.ErrorCode.SortingFault, barcode, solveNode, solveLane));
 				}
 			}
 
@@ -306,14 +304,10 @@ namespace RouteDirector
 
 		static private bool CheckStackSeq()
 		{
-			if ((workingStack != null) && (workingStack.stackStatus == StackStatus.Deleting))
-			{
-				workingStack = null;
-			}
 
-			if ((workingStack != null)&&(workingStack.stackStatus == StackStatus.Finished))
+			if ((workingStack != null))
 			{
-				SendFinish();
+				if(workingStack.stackStatus == StackStatus.Finished)
 				workingStack = null;
 			}
 
@@ -328,7 +322,7 @@ namespace RouteDirector
 						workingStack = waitingStackSeqList[0];
 						workingStack.stackStatus = StackStatus.Busying;
 						waitingStackSeqList.RemoveAt(0);
-						Log.log.Debug("WorkStack is empty,set waiting stackseq to work");
+						Log.log.Info("WorkStack is empty,set waiting stackseq to work");
 						return true;
 					}
 				}
@@ -336,16 +330,61 @@ namespace RouteDirector
 			return false;
 		}
 
-		static private void SendFinish()
-		{ }
-
 		private void CheckStatus()
 		{
 			if (boxList.TrueForAll(box => box.status == BoxStatus.Success) == true)
 			{
-				Log.log.Debug("stack sort success");
+				Log.log.Info("stack sort success");
 				stackStatus = StackStatus.Finished;
+				ReportContainer(SeqNum);
+				CheckStackSeq();
 			}
 		}
+
+		private class ErrorInfo
+		{
+			public enum ErrorCode
+			{
+				Unknow = 1,
+				Outlist,
+				CheckTimeout,
+				SortingTimeout,
+				LaneFull,
+				SortingFault,
+				ConnectionFalut
+			}
+
+			public ErrorCode errorCode;
+			public string barcode;
+			public Int16 node;
+			public Int16 lane;
+
+			public ErrorInfo(ErrorCode tErrorCode, string tBarcode, Int16 tNode, Int16 tLane)
+			{
+				errorCode = tErrorCode;
+				barcode = tBarcode;
+				node = tNode;
+				lane = tLane;
+			}
+		}
+		
+		static private void ReportContainer(int container)
+		{
+
+		}
+
+		static private void ReportError(ErrorInfo errorInfo)
+		{
+
+		}
+
+		static private void ReportBox(Chest chest)
+		{
+
+		}
+
+		#region
+	
+		#endregion
 	}
 }
