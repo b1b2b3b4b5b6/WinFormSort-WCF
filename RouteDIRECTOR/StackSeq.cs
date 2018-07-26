@@ -17,7 +17,7 @@ namespace RouteDirector
 		private static List<string> outListBox;
 		private static readonly object lockObject = new object();
 		private static System.Timers.Timer sortingTimer;
-		private static int sortingTime = 120;
+		private static int sortingTime = 30;
 
 		public enum StackStatus
 		{
@@ -70,7 +70,7 @@ namespace RouteDirector
 			{
 				Log.log.Info("stack sort success");
 				stackStatus = StackStatus.Finished;
-				SortingTimeStop();
+				SortingTimerStop();
 				ReportContainer(SeqNum);
 				CheckStackSeq();
 			}
@@ -110,6 +110,7 @@ namespace RouteDirector
 				}
 				waitingStackSeqList.Add(stackSeq);
 				stackSeq.SeqNum = container;
+				CheckStackSeq();
 				return stackSeq.SeqNum;
 			}
 			return -1;
@@ -125,6 +126,7 @@ namespace RouteDirector
 					{
 						workingStack = null;
 						Log.log.Info("Delete stackseq[" + tSeqNum + "] success");
+						SortingTimerStop();
 						return 0;
 					}
 				}
@@ -133,6 +135,8 @@ namespace RouteDirector
 				stackSeq = waitingStackSeqList.Find(mStackSeq => mStackSeq.SeqNum == tSeqNum);
 				if (stackSeq != null)
 				{
+					if (waitingStackSeqList.IndexOf(stackSeq) == 0)
+						SortingTimerStop();
 					waitingStackSeqList.Remove(stackSeq);
 					Log.log.Info("Delete stackseq[" + tSeqNum + "] success");
 					return 0;
@@ -150,6 +154,7 @@ namespace RouteDirector
 				waitingStackSeqList.Clear();
 				outListBox.Clear();
 				sortStatus = SortStatus.Stoping;
+				SortingTimerStop();
 				Log.log.Info("Clear all");
 			}
 		}
@@ -168,6 +173,7 @@ namespace RouteDirector
 				workingStack.stackStatus = StackStatus.Inital;
 				waitingStackSeqList.Insert(0, workingStack);
 				workingStack = null;
+				SortingTimerStop();
 				Log.log.Info("Reset working stack");
 				return 0;
 			}
@@ -241,7 +247,7 @@ namespace RouteDirector
 						if (stackSeq.boxList.TrueForAll(mBox => mBox.status == BoxStatus.Checked) == true)
 						{
 							Log.log.Info("Seq[" + stackSeq.SeqNum + "] all box has been checked");
-							SortingTimeStop();
+							SortingTimerStop();
 							stackSeq.stackStatus = StackStatus.BoxChecked;
 						}
 					}
@@ -350,7 +356,10 @@ namespace RouteDirector
 			}
 
 			if (workingStack != null)
+			{
+				CheckTimeout();
 				return true;
+			}
 			else
 			{
 				if (waitingStackSeqList.Count > 0)
@@ -359,50 +368,88 @@ namespace RouteDirector
 					{
 						workingStack = waitingStackSeqList[0];
 						workingStack.stackStatus = StackStatus.Sorting;
-						SortingTimerStart();
 						waitingStackSeqList.RemoveAt(0);
 						Log.log.Info("WorkStack is empty,set waiting stackseq to work");
+						CheckTimeout();
 						return true;
-					}
-					else
-					{
-						SortingTimerStart();
 					}
 				}
 			}
+			CheckTimeout();
 			return false;
+		}
+
+		static private void CheckTimeout()
+		{
+			if (workingStack != null)
+				SortingTimerStart();
+			else
+			{
+				if(waitingStackSeqList.Count > 0)
+					SortingTimerStart();
+			}
+		}
+
+		static public void Start()
+		{
+			Log.log.Info("Start sorting");
+			sortStatus = SortStatus.Working;
+			CheckStackSeq();
+			
+		}
+
+		static public void Stop()
+		{
+			Log.log.Info("Stop sorting");
+			sortStatus = SortStatus.Stoping;
+			SortingTimerStop();
 		}
 
 		#region timeout check
 
 		static private void SortingTimerInit(int s)
 		{
-			Log.log.Debug("Receive heartbeat init");
+			Log.log.Debug("Sorting heartbeat init");
 			sortingTimer = new System.Timers.Timer();
 			sortingTimer.Elapsed += SortingTimer_Elapsed;
 			sortingTimer.Interval = s * 1000;
 			sortingTimer.AutoReset = false;
 			sortingTimer.Stop();
 		}
+
 		static private void SortingTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
 		{
-			if(workingStack != null)
+			Log.log.Debug("Sorting timer elapsed");
+			if (workingStack != null)
 				ReportError(new ErrorInfo(ErrorInfo.ErrorCode.SortingTimeout, workingStack.GetNextBox(BoxStatus.Checked), 0, 0));
 			else
-				ReportError(new ErrorInfo(ErrorInfo.ErrorCode.CheckTimeout, workingStack.GetNextBox(BoxStatus.Inital), 0, 0));
+				ReportError(new ErrorInfo(ErrorInfo.ErrorCode.CheckTimeout, waitingStackSeqList[0].GetNextBox(BoxStatus.Inital), 0, 0));
+			SortingTimeReset();
 		}
+
 		static private void SortingTimerStart()
 		{
-			sortingTimer.Start();
+
+			if (sortingTimer.Enabled == true)
+				return;
+			else
+			{
+				sortingTimer.Start();
+				Log.log.Debug("Sorting timer start");
+			}
 		}
-		static private void SortingTimeStop()
+
+		static private void SortingTimerStop()
 		{
 			sortingTimer.Stop();
+			Log.log.Debug("Sorting timer stop");
 		}
+
 		static private void SortingTimeReset()
 		{
 			sortingTimer.Stop();
 			sortingTimer.Start();
+			Log.log.Debug("Sorting timer reset");
 		}
 		#endregion
 	}

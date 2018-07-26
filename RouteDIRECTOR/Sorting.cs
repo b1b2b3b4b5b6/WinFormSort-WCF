@@ -50,15 +50,13 @@ namespace RouteDirector
 
 		public int StartWorkingStackSeq()
 		{
-			StackSeq.sortStatus = StackSeq.SortStatus.Working;
-			Log.log.Info("Start sorting");
+			StackSeq.Start();
 			return 0;
 		}
 
 		public int StopWorkingStackSeq()
 		{
-			StackSeq.sortStatus = StackSeq.SortStatus.Stoping;
-			Log.log.Info("Stop sorting");
+			StackSeq.Stop();
 			return 0;
 		}
 
