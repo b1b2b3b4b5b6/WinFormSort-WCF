@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using RouteDirector;
-namespace IRouteDirector
+
+namespace RouteDirector
 {
 	public class Sorting : ISorting
 	{
+
 		public int AddStackSeq(string strJson)
 		{
 			List<Chest> chestList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Chest>>(strJson);
@@ -67,4 +68,5 @@ namespace IRouteDirector
 		}
 
 	}
+
 }

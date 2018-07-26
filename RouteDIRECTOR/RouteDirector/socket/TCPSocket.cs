@@ -10,7 +10,8 @@ namespace RouteDirector
 		private Socket clientSocket;
 
 		public bool ConnectStatus { set; get; }
-		public TCPSocket() {
+		public TCPSocket()
+		{
 			ConnectStatus = false;
 		}
 
@@ -23,9 +24,9 @@ namespace RouteDirector
 				clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 				clientSocket.Connect(ipe);
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
-				Log.log.Error("Tcp connnect error",e);
+				Log.log.Error("Tcp connnect error", e);
 				return -1;
 			}
 
@@ -53,13 +54,18 @@ namespace RouteDirector
 
 		public byte[] ReceiveData()
 		{
-			byte[] buf = new byte[1024*100];
+			byte[] buf = new byte[1024 * 100];
 			int len;
 			try
 			{
-				
+
 				len = clientSocket.Receive(buf);
 				byte[] packet = new byte[len];
+				if (packet.Length < 20)
+				{
+					Log.log.Error("Tcp receive length is too short:" + packet.Length);
+					return null;
+				}
 				Array.Copy(buf, packet, len);
 				return packet;
 			}
@@ -80,7 +86,7 @@ namespace RouteDirector
 			}
 			catch (Exception e)
 			{
-				Log.log.Error("Tcp send error",e);
+				Log.log.Error("Tcp send error", e);
 				return -1;
 			}
 			return len;

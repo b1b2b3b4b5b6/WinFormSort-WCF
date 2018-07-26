@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 using System.ServiceModel;
 using System.Text;
 
-namespace IRouteDirector
+namespace RouteDirector
 {
 	// 未注明返回值的函数默认成功返回0，失败返回-1；
 	[ServiceContract] 
@@ -44,7 +44,5 @@ namespace IRouteDirector
 		public Int16 lane;
 		public int container;
 	}
-
-	
 }
 		

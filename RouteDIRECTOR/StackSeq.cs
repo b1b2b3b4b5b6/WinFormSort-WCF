@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using static RouteDirector.Box;
-using IRouteDirector;
+using static RouteDirector.ReportInfo;
 namespace RouteDirector
 {
 	public class StackSeq
@@ -11,28 +11,89 @@ namespace RouteDirector
 			Working = 0,
 			Stoping,
 		}
-		static public SortStatus sortStatus = SortStatus.Stoping;
-		static public StackSeq workingStack = null;
-		static public List<StackSeq> waitingStackSeqList = new List<StackSeq> { };
-		static private List<string> outListBox = new List<string> { };
-		static readonly object lockObject = new object();
-		static System.Timers.Timer recHeartTime;
-		static System.Timers.Timer sendHeartTime;
+		public static SortStatus sortStatus;
+		public static StackSeq workingStack = null;
+		public static  List<StackSeq> waitingStackSeqList;
+		private static List<string> outListBox;
+		private static readonly object lockObject = new object();
+		private static System.Timers.Timer sortingTimer;
+		private static int sortingTime = 120;
+
 		public enum StackStatus
 		{
 			Finished = 0,
 			CheckingBox,
 			BoxChecked,
-			Busying,
+			Sorting,
 			Inital,
 		}
 		public StackStatus stackStatus = StackStatus.Inital;
-		public int SeqNum = 0;
+		public int SeqNum;
 		public List<Box> boxList = new List<Box> { };
 		public List<NodeSeq> nodeSeqList = new List<NodeSeq> { };
 
 		static Int16 solveNode = 6;
 		static Int16 solveLane = 997;
+		public StackSeq()
+		{
+			boxList.Clear();
+			nodeSeqList.Clear();
+			SeqNum = 0;
+		}
+
+		private int AddBoxList(List<Box> tBoxList)
+		{
+
+			foreach (Box box in tBoxList)
+			{
+				boxList.Add(box);
+				int index;
+				index = nodeSeqList.FindIndex(mNodeSeq => mNodeSeq.node == box.node);
+				if (index == -1)
+				{
+					NodeSeq nodeSeq = new NodeSeq(box.node);
+					nodeSeqList.Add(nodeSeq);
+					nodeSeq.AddBox(box);
+				}
+				else
+					nodeSeqList[index].AddBox(box);
+			}
+
+			stackStatus = StackStatus.CheckingBox;
+
+			return boxList.Count;
+		}
+
+		private void CheckStatus()
+		{
+			if (boxList.TrueForAll(box => box.status == BoxStatus.Success) == true)
+			{
+				Log.log.Info("stack sort success");
+				stackStatus = StackStatus.Finished;
+				SortingTimeStop();
+				ReportContainer(SeqNum);
+				CheckStackSeq();
+			}
+		}
+
+		private string GetNextBox(BoxStatus boxStatus)
+		{
+			Box box = boxList.Find(mBox => mBox.status != boxStatus);
+			if (box == null)
+				return null;
+			else
+				return box.barcode;
+		}
+
+		static public void Init()
+		{
+
+			SortingTimerInit(sortingTime);
+			sortStatus = SortStatus.Stoping;
+			workingStack = null;
+			waitingStackSeqList = new List<StackSeq> { };
+			outListBox = new List<string> { };
+		}
 
 		static public int AddStackSeq(List<Box> tBoxList, int container)
 		{
@@ -112,30 +173,6 @@ namespace RouteDirector
 			}
 		}
 
-		private int AddBoxList(List<Box> tBoxList)
-		{
-			boxList.Clear();
-			nodeSeqList.Clear();
-			foreach (Box box in tBoxList)
-			{
-				boxList.Add(box);
-				int index;
-				index = nodeSeqList.FindIndex(mNodeSeq => mNodeSeq.node == box.node);
-				if (index == -1)
-				{
-					NodeSeq nodeSeq = new NodeSeq(box.node);
-					nodeSeqList.Add(nodeSeq);
-					nodeSeq.AddBox(box);
-				}
-				else
-					nodeSeqList[index].AddBox(box);
-			}
-
-			stackStatus = StackStatus.CheckingBox;
-
-			return boxList.Count;
-		}
-
 		static public DivertCmd Hander(MessageBase msg)
 		{
 			lock (lockObject)
@@ -194,13 +231,17 @@ namespace RouteDirector
 				box = FindBox(stackSeq, divertReq.codeStr);
 				if (box != null)
 				{
+					if (waitingStackSeqList.IndexOf(stackSeq) != 0)
+						return null;
 					if (box.status == BoxStatus.Inital)
 					{
 						box.status = BoxStatus.Checked;
 						Log.log.Info("Seq["+ stackSeq.SeqNum + "] Box["+ box.barcode+"]"+ " has been checked");
+						SortingTimeReset();
 						if (stackSeq.boxList.TrueForAll(mBox => mBox.status == BoxStatus.Checked) == true)
 						{
 							Log.log.Info("Seq[" + stackSeq.SeqNum + "] all box has been checked");
+							SortingTimeStop();
 							stackSeq.stackStatus = StackStatus.BoxChecked;
 						}
 					}
@@ -231,8 +272,11 @@ namespace RouteDirector
 					Log.log.Info("Success removed unknow box from line");
 				else
 				{
-					Log.log.Info("removed unknow box from conveyor line fail: "+divertRes.GetResult());
-					;
+					Log.log.Info("removed unknow box from conveyor line fail: " + divertRes.GetResult());
+					if(divertRes.divertRes == 32)
+						ReportError(new ErrorInfo(ErrorInfo.ErrorCode.LaneFull, "?", solveNode, solveLane));
+					else
+						ReportError(new ErrorInfo(ErrorInfo.ErrorCode.SortingFault, "?", solveNode, solveLane));
 				}
 				return;
 			}
@@ -248,6 +292,7 @@ namespace RouteDirector
 						{
 							box.status = BoxStatus.Success;
 							Log.log.Info("Box[" + box.barcode + "] sort success");
+							SortingTimeReset();
 							workingStack.CheckStatus();
 							ReportBox(new Chest() { barcode = box.barcode, lane = box.lane, node = box.node, container = workingStack.SeqNum });
 						}
@@ -257,7 +302,7 @@ namespace RouteDirector
 							if (divertRes.divertRes == 32)
 							{
 								Log.log.Error("box["+box.barcode+"] sort faild,node["+ divertRes.nodeId + "]"+ "lane["+ box.lane + "] is full");
-								//ReportStatus(StatusToReport.LaneFull);
+								ReportError(new ErrorInfo(ErrorInfo.ErrorCode.LaneFull, box.barcode, box.node, box.lane));
 								return;
 							}
 				
@@ -269,14 +314,7 @@ namespace RouteDirector
 				}
 			}
 
-			foreach (StackSeq stackSeq in waitingStackSeqList)
-			{
-				box = FindBox(stackSeq, divertRes.codeStr);
-				if (box != null)
-				{
-					return;
-				}
-			}
+
 			string barcode = outListBox.Find(mBarcode => mBarcode.Equals(divertRes.codeStr));
 			if (barcode != null)
 			{ 
@@ -320,71 +358,52 @@ namespace RouteDirector
 					if (waitingStackSeqList[0].stackStatus == StackStatus.BoxChecked)
 					{
 						workingStack = waitingStackSeqList[0];
-						workingStack.stackStatus = StackStatus.Busying;
+						workingStack.stackStatus = StackStatus.Sorting;
+						SortingTimerStart();
 						waitingStackSeqList.RemoveAt(0);
 						Log.log.Info("WorkStack is empty,set waiting stackseq to work");
 						return true;
+					}
+					else
+					{
+						SortingTimerStart();
 					}
 				}
 			}
 			return false;
 		}
 
-		private void CheckStatus()
+		#region timeout check
+
+		static private void SortingTimerInit(int s)
 		{
-			if (boxList.TrueForAll(box => box.status == BoxStatus.Success) == true)
-			{
-				Log.log.Info("stack sort success");
-				stackStatus = StackStatus.Finished;
-				ReportContainer(SeqNum);
-				CheckStackSeq();
-			}
+			Log.log.Debug("Receive heartbeat init");
+			sortingTimer = new System.Timers.Timer();
+			sortingTimer.Elapsed += SortingTimer_Elapsed;
+			sortingTimer.Interval = s * 1000;
+			sortingTimer.AutoReset = false;
+			sortingTimer.Stop();
 		}
-
-		private class ErrorInfo
+		static private void SortingTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
 		{
-			public enum ErrorCode
-			{
-				Unknow = 1,
-				Outlist,
-				CheckTimeout,
-				SortingTimeout,
-				LaneFull,
-				SortingFault,
-				ConnectionFalut
-			}
-
-			public ErrorCode errorCode;
-			public string barcode;
-			public Int16 node;
-			public Int16 lane;
-
-			public ErrorInfo(ErrorCode tErrorCode, string tBarcode, Int16 tNode, Int16 tLane)
-			{
-				errorCode = tErrorCode;
-				barcode = tBarcode;
-				node = tNode;
-				lane = tLane;
-			}
+			if(workingStack != null)
+				ReportError(new ErrorInfo(ErrorInfo.ErrorCode.SortingTimeout, workingStack.GetNextBox(BoxStatus.Checked), 0, 0));
+			else
+				ReportError(new ErrorInfo(ErrorInfo.ErrorCode.CheckTimeout, workingStack.GetNextBox(BoxStatus.Inital), 0, 0));
 		}
-		
-		static private void ReportContainer(int container)
+		static private void SortingTimerStart()
 		{
-
+			sortingTimer.Start();
 		}
-
-		static private void ReportError(ErrorInfo errorInfo)
+		static private void SortingTimeStop()
 		{
-
+			sortingTimer.Stop();
 		}
-
-		static private void ReportBox(Chest chest)
+		static private void SortingTimeReset()
 		{
-
+			sortingTimer.Stop();
+			sortingTimer.Start();
 		}
-
-		#region
-	
 		#endregion
 	}
 }
